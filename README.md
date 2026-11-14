@@ -2,7 +2,9 @@
 
 An unofficial fan-made action game set in the world of *Avatar: The Last Airbender*. You play as Team Avatar and their rivals, each with bending styles and signature moves from the show, through a three-Book story campaign, one-on-one duels, and an endless survival mode.
 
-Everything is drawn and voiced procedurally (Canvas 2D and the Web Audio API). There are no external assets, no build step, and no dependencies.
+The game is **fully 3D**: cel-shaded characters, dynamic lighting and shadows, a follow camera, and 3D bending effects (tornadoes, lightning, fire spirals, Appa flying overhead), all built with [Three.js](https://threejs.org). A **Classic 2D** top-down view is also available in Settings, and is used automatically if your browser has no WebGL.
+
+Characters, arenas, effects, sound and music are all generated in code. There are no image or audio assets and no build step. Three.js (r159, MIT license) is included in `js/vendor/`, so the game works offline.
 
 ## How to play
 
@@ -22,6 +24,8 @@ Alternatively, serve the folder (for example `python3 -m http.server`) and open 
 | `R` | Ability 3 |
 | `Space` / `Shift` | Dash (brief invulnerability) |
 | `F` | Ultimate (when the gold meter is full) |
+| `V` | Switch camera: tactical (high) / action (low, behind the hero), 3D only |
+| Mouse wheel | Zoom the camera, 3D only |
 | `Esc` / `P` | Pause |
 | `M` | Toggle music |
 
@@ -60,6 +64,12 @@ Alternatively, serve the folder (for example `python3 -m http.server`) and open 
   - ☄️ Sozin's Comet supercharges firebending in the finale.
 - **Easter eggs**: hit Combustion Man with Sokka's boomerang while he's charging a blast. Grab cabbages to heal (sorry, cabbage merchant). White Lotus tiles charge your ultimate.
 
+## Graphics settings
+
+- **3D or Classic 2D** can be switched any time in Settings.
+- **Tactical / Action camera**: press `V` during a battle, or choose in Settings.
+- **Automatic quality**: if frames are consistently slow, the game lowers the render resolution and then turns off shadows.
+
 ## Project layout
 
 ```
@@ -78,8 +88,12 @@ js/characters.js    the full roster and every ability
 js/ai.js            player controller and enemy AI
 js/levels.js        arenas, themes, story chapters
 js/ui.js            menus and HUD
+js/render3d.js      3D renderer: models, arenas, effects, lighting, camera, menu scene
 js/main.js          game loop, camera, battle and mode logic
+js/vendor/          Three.js (MIT license)
 ```
+
+The game simulation runs on a flat 2D plane. The 3D renderer mirrors it into a Three.js scene every frame, so the gameplay is the same in both views.
 
 ## Disclaimer
 

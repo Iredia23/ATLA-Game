@@ -16,7 +16,7 @@ class Particles {
       const sp = rand(o.smin ?? 20, o.smax ?? 110);
       const b = {
         x: x + rand(-(o.jx || 0), o.jx || 0), y: y + rand(-(o.jy ?? o.jx ?? 0), o.jy ?? o.jx ?? 0),
-        vx: Math.cos(ang) * sp + (o.vx || 0), vy: Math.sin(ang) * sp + (o.vy || 0), z: o.z ?? 0,
+        vx: Math.cos(ang) * sp + (o.vx || 0), vy: Math.sin(ang) * sp + (o.vy || 0), z: o.z ?? 0, lift: o.z === undefined,
       };
       let p;
       switch (type) {

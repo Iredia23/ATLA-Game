@@ -45,7 +45,7 @@ const ELEMENT_ICONS = { air: '🌪️', water: '💧', earth: '🪨', fire: '�
 
 // ---------- Save data ----------
 const Save = {
-  data: { done: {}, settings: { diff: 'normal', sfx: true, music: true, numbers: true, unlockAll: false }, best: {} },
+  data: { done: {}, settings: { diff: 'normal', sfx: true, music: true, numbers: true, unlockAll: false, view: '3d', cam: 'tactical' }, best: {} },
   load() {
     try {
       const raw = localStorage.getItem('atla_elements_save');

@@ -233,7 +233,7 @@ const ROSTER = {
         const tx = f.x + Math.cos(a) * 1150, ty = f.y + Math.sin(a) * 1150;
         const hit = new Set();
         Sound.play('roar'); Sound.play('airBig');
-        w.fx({ x: sx, y: sy, life: 1.9, layer: 'top', ang: a,
+        w.fx({ type: 'appa', x: sx, y: sy, life: 1.9, layer: 'top', ang: a,
           update(dt, w2, e) {
             const k = e.t / e.life; e.x = lerp(sx, tx, k); e.y = lerp(sy, ty, k);
             for (const t of w2.fighters) if (t.alive && t.team !== f.team && !hit.has(t.id) && dist(e.x, e.y, t.x, t.y) < 100 + t.r) {

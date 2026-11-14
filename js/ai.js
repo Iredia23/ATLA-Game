@@ -123,3 +123,21 @@ class AIController {
     return I;
   }
 }
+
+// Used by the 3D title-screen diorama: heroes idly practise their bending.
+class IdleController {
+  constructor(i) { this.I = {}; this.t = rand(0.5, 2.5); this.a = rand(0, TAU); this.turn = rand(-0.4, 0.4); this.i = i; }
+  think(f, w, dt) {
+    const I = this.I;
+    I.mx = I.my = 0; I.basic = I.q = I.e = I.r = I.dash = I.ult = false;
+    this.a += this.turn * dt;
+    this.t -= dt;
+    if (this.t <= 0) {
+      this.t = rand(1.6, 3.4);
+      this.a = angTo(w.W / 2, w.H / 2, f.x, f.y) + rand(-0.9, 0.9);
+      if (Math.random() < 0.25) I.q = true; else I.basic = true;
+    }
+    I.ax = f.x + Math.cos(this.a) * 200; I.ay = f.y + Math.sin(this.a) * 200;
+    return I;
+  }
+}

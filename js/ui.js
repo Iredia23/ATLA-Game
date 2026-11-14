@@ -23,6 +23,7 @@ const UI = {
     this.portraits = [];
     this.root.innerHTML = `<div class="screen scr-${cls}">${html}</div>`;
     this.root.style.display = 'flex';
+    this.root.className = cls === 'title' ? '' : 'dim';
     this.root.scrollTop = 0;
   },
   hide() { this.root.style.display = 'none'; this.root.innerHTML = ''; this.portraits = []; },
@@ -56,6 +57,7 @@ const UI = {
       case 'toMenu': Game.quit(); break;
       case 'diff': Save.data.settings.diff = d.v; Save.write(); this.settings(); break;
       case 'toggle': Save.data.settings[d.k] = !Save.data.settings[d.k]; Save.write(); Sound.applySettings(); this.settings(); break;
+      case 'setv': Save.data.settings[d.k] = d.v; Save.write(); this.settings(); break;
       case 'reset':
         if (confirm('Reset all story progress and records?')) { Save.reset(); this.settings(); }
         break;
@@ -253,6 +255,8 @@ const UI = {
             <tr><td><kbd>Space</kbd> / <kbd>Shift</kbd></td><td>Dash (brief invulnerability)</td></tr>
             <tr><td><kbd>F</kbd></td><td>Ultimate (when the gold meter is full)</td></tr>
             <tr><td><kbd>Esc</kbd> / <kbd>P</kbd></td><td>Pause</td></tr>
+            <tr><td><kbd>V</kbd></td><td>Switch camera (tactical / action) — 3D view</td></tr>
+            <tr><td><kbd>Mouse wheel</kbd></td><td>Zoom camera — 3D view</td></tr>
             <tr><td><kbd>M</kbd></td><td>Toggle music</td></tr>
           </table>
           <h3>Resources</h3>
@@ -295,6 +299,15 @@ const UI = {
       <div class="settings">
         <h3>Difficulty</h3>
         <div class="row">${Object.entries(DIFFICULTY).map(([k, v]) => `<button class="btn ${s.diff === k ? 'on' : ''}" data-act="diff" data-v="${k}">${v.label}</button>`).join('')}</div>
+        <h3>Graphics</h3>
+        <div class="row">
+          <button class="btn ${s.view !== '2d' ? 'on' : ''}" data-act="setv" data-k="view" data-v="3d" ${R3.ok ? '' : 'disabled title="WebGL is not available in this browser"'}>3D</button>
+          <button class="btn ${s.view === '2d' ? 'on' : ''}" data-act="setv" data-k="view" data-v="2d">Classic 2D</button>
+          <span class="sep"></span>
+          <button class="btn ${s.cam !== 'action' ? 'on' : ''}" data-act="setv" data-k="cam" data-v="tactical">Tactical camera</button>
+          <button class="btn ${s.cam === 'action' ? 'on' : ''}" data-act="setv" data-k="cam" data-v="action">Action camera</button>
+        </div>
+        ${R3.ok ? '' : '<p class="note">WebGL isn\'t available here, so the game uses the classic 2D view.</p>'}
         <h3>Audio &amp; display</h3>
         <div class="row">${tg('sfx', 'Sound effects')}${tg('music', 'Music')}${tg('numbers', 'Damage numbers')}</div>
         <h3>Progress</h3>
@@ -350,6 +363,7 @@ const UI = {
       const g = ctx.createRadialGradient(W / 2, H * 0.55, 5, W / 2, H * 0.55, W * 0.6);
       g.addColorStop(0, shade(ELEMENT_COLORS[d.element], -0.2)); g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      if (R3.active()) { R3.portrait(ctx, d, W, H, t, p.anim); continue; }
       const special = d.art.special === 'heibai' ? 0.95 : d.art.mount ? 1.25 : 1.75;
       const sc = special * (W / 120);
       const ang = p.anim ? Math.PI / 2 + Math.sin(t * 0.8) * 0.5 : Math.PI / 2;
@@ -382,6 +396,7 @@ const UI = {
   drawHUD(ctx, g) {
     const b = g.battle, w = g.world, p = b.player, W = g.cssW, H = g.cssH;
     ctx.save();
+    if (g.is3d()) this.drawWorldOverlay(ctx, g, w);
     // low HP vignette
     if (p.alive && p.hp / p.maxHp < 0.3) {
       const k = 0.35 + Math.sin(g.t * 6) * 0.1;
@@ -534,11 +549,40 @@ const UI = {
     for (const pk of w.pickups) { ctx.fillStyle = pk.type === 'cabbage' ? '#7cc56b' : pk.type === 'chi' ? '#7fe0ff' : '#fff'; ctx.fillRect(x + pk.x * sx - 1.5, y + pk.y * sy - 1.5, 3, 3); }
   },
 
+  // 3D view: health bars, status marks and floating numbers projected onto the screen
+  drawWorldOverlay(ctx, g, w) {
+    ctx.textAlign = 'center';
+    for (const f of w.fighters) {
+      if (!f.alive) continue;
+      const sc = f.def.artScale || f.r / 16;
+      const hgt = (f.def.art.special === 'heibai' ? 84 : f.def.art.mount ? 80 : 62) * sc + (f.flags.hover || 0);
+      const s = g.toScreen(f.x, f.y, hgt);
+      if (!s.vis) continue;
+      if (!f.isPlayer && !f.boss && !f.showBar && f.hp < f.maxHp) {
+        const bw = 36;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(s.x - bw / 2, s.y - 4, bw, 5);
+        ctx.fillStyle = f.team === 0 ? '#5fd35f' : '#e0483a'; ctx.fillRect(s.x - bw / 2, s.y - 4, bw * f.hp / f.maxHp, 5);
+      }
+      if (f.status.stun > 0) {
+        for (let i = 0; i < 3; i++) { const a = f.anim * 5 + i * TAU / 3; ctx.fillStyle = '#ffe97a'; circle(ctx, s.x + Math.cos(a) * 13, s.y - 10 + Math.sin(a) * 4, 3); ctx.fill(); }
+      }
+      if (f.status.chiBlock > 0) { ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#f5c7d8'; ctx.fillText('⊘ chi blocked', s.x, s.y - 16); }
+    }
+    for (const t of w.texts) {
+      const s = g.toScreen(t.x, t.y + 40, 40);
+      const k = t.t / t.life;
+      ctx.globalAlpha = 1 - k * k;
+      ctx.font = `bold ${t.size + 2}px "Trebuchet MS", sans-serif`;
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      ctx.strokeText(t.txt, s.x, s.y); ctx.fillStyle = t.color; ctx.fillText(t.txt, s.x, s.y);
+    }
+    ctx.globalAlpha = 1;
+  },
+
   drawOffscreen(ctx, g, w, W, H) {
-    const z = g.cam.zoom;
     for (const f of w.fighters) {
       if (!f.alive || f.team === 0) continue;
-      const sx = (f.x - g.cam.x) * z + W / 2, sy = (f.y - 20 - g.cam.y) * z + H / 2;
+      const sp = g.toScreen(f.x, f.y, 20), sx = sp.x, sy = sp.y;
       if (sx > 0 && sx < W && sy > 0 && sy < H) continue;
       const a = Math.atan2(sy - H / 2, sx - W / 2);
       const ex = clamp(sx, 30, W - 30), ey = clamp(sy, 30, H - 30);

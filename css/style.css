@@ -15,7 +15,7 @@ canvas#game { position: fixed; inset: 0; display: block; cursor: crosshair; }
 #ui { position: fixed; inset: 0; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; z-index: 5; }
 .screen { width: 100%; max-width: 1240px; padding: 24px 16px 40px; margin: auto; }
 .scr-title, .scr-pausescr, .scr-resultscr, .scr-introscr { display: flex; align-items: center; justify-content: center; min-height: 100%; }
-.screen:not(.scr-title) { background: linear-gradient(180deg, rgba(13,11,16,0.55), rgba(13,11,16,0.85)); }
+#ui.dim { background: linear-gradient(180deg, rgba(13,11,16,0.55), rgba(13,11,16,0.85)); }
 
 h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; margin: 0; }
 .btn { font: inherit; color: var(--ink); background: linear-gradient(180deg, #3a2e44, #261e2e); border: 1px solid var(--line);
@@ -139,3 +139,8 @@ kbd { background: #2a2232; border: 1px solid #554a60; border-bottom-width: 2px; 
   .detail { position: static; }
   .stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+canvas#game3d { position: fixed; inset: 0; display: block; }
+.settings .sep { width: 18px; }
+.settings .note { color: var(--muted); font-size: 13px; }
+.btn[disabled] { opacity: .4; cursor: not-allowed; }

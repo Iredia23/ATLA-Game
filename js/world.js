@@ -119,7 +119,7 @@ class World {
       if (dist(f.x, f.y, p.x, p.y) < range && Math.abs(angDiff(ang, angTo(f.x, f.y, p.x, p.y))) < arc / 2) p.die(this, true);
     }
     const col = o.color || '#ffffff';
-    this.fx({ x: f.x, y: f.y, life: 0.18, ang, range, arc, col, owner: f,
+    this.fx({ type: 'slash', x: f.x, y: f.y, life: 0.18, ang, range, arc, col, owner: f,
       draw(ctx, w, e) {
         const k = e.t / e.life;
         ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = e.col; ctx.lineWidth = 7 * (1 - k) + 1.5; ctx.lineCap = 'round';
@@ -153,7 +153,7 @@ class World {
     }
     pts.push([ex, ey]);
     const blue = o.color || '#bfe4ff';
-    this.fx({ life: 0.28, pts, blue, layer: 'top', draw(ctx, w, e) {
+    this.fx({ type: 'bolt', life: 0.28, pts, blue, layer: 'top', draw(ctx, w, e) {
       const k = e.t / e.life;
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (const [lw, c, al] of [[9, e.blue, 0.35], [3.5, '#ffffff', 1]]) {
@@ -166,20 +166,22 @@ class World {
     this.shakeIt(7);
     Sound.play('zap');
     if (hit) {
-      if (hit.flags.redirect && depth < 3) { this.redirect(hit, dmg); return hit; }
+      if (hit.flags.redirect && depth < 3) { this.redirect(hit, dmg, depth); return hit; }
       this.damage(hit, dmg, f, Object.assign({ elem: 'fire', knock: 260, dir: ang, stun: 0.35 }, o));
     }
     return hit;
   }
 
   // Lightning redirection: absorb energy and send it back out.
-  redirect(f, incoming) {
+  redirect(f, incoming, depth = 0) {
+    // consume the stance first so two redirecting fighters can't bounce a bolt forever
+    f.removeBuff('redirect', this);
+    f.flags.redirect = false;
     this.text(f.x, f.y - 70, 'REDIRECTED!', '#bfe4ff', 16);
     this.parts.emit('lightning', f.x, f.y - 20, 16, { smax: 140 });
     const ang = angTo(f.x, f.y, f.aimX, f.aimY);
     const dmg = Math.max(30, incoming * 1.6) * (f.def.redirectMult || 1);
-    this.lightning(f, ang, 760, dmg, {}, 1);
-    f.removeBuff('redirect', this);
+    this.lightning(f, ang, 760, dmg, {}, depth + 1);
     f.invuln = Math.max(f.invuln, 0.2);
   }
 
@@ -194,7 +196,7 @@ class World {
     const kind = o.kind || 'fire';
     this.parts.emit(kind, x, y, Math.min(50, r * 0.4), { smax: r * 2.4, scale: 1.4 });
     this.parts.emit('smoke', x, y, 10, { smax: r * 1.2 });
-    this.fx({ x, y, r, life: 0.35, kind, layer: 'top', draw(ctx, w, e) {
+    this.fx({ type: 'blast', x, y, r, life: 0.35, kind, layer: 'top', draw(ctx, w, e) {
       const k = e.t / e.life;
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = (1 - k) * 0.8;
       const g = ctx.createRadialGradient(e.x, e.y - 10, 0, e.x, e.y - 10, e.r * (0.6 + k * 0.6));
@@ -210,7 +212,7 @@ class World {
   ring(src, x, y, maxR, speed, dmg, o = {}) {
     const hit = new Set();
     const team = src ? src.team : -1;
-    return this.fx({ x, y, life: maxR / speed, layer: 'under', color: o.color || 'rgba(255,255,255,0.8)',
+    return this.fx({ type: 'ring', maxR, x, y, life: maxR / speed, layer: 'under', color: o.color || 'rgba(255,255,255,0.8)',
       update(dt, w, e) {
         const R = (e.t / e.life) * maxR;
         for (const f of w.fighters) {

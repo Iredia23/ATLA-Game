@@ -29,7 +29,7 @@ const A = {
   later(w, delay, fn) { return w.fx({ life: delay, onEnd: (w2) => fn(w2) }); },
 
   telegraph(w, x, y, r, delay, color, cb, o = {}) {
-    return w.fx({ x, y, r, life: delay, layer: 'under', color,
+    return w.fx({ type: 'telegraph', boulder: !!o.boulder, x, y, r, life: delay, layer: 'under', color,
       draw(ctx, w2, e) {
         const k = e.t / e.life;
         ctx.save();
@@ -50,7 +50,7 @@ const A = {
 
   tornado(w, f, x, y, o = {}) {
     const team = f.team;
-    return w.fx({ x, y, life: o.life || 4, r: o.r || 105, tick: 0, layer: 'sorted', sortY: y,
+    return w.fx({ type: 'tornado', x, y, life: o.life || 4, r: o.r || 105, tick: 0, layer: 'sorted', sortY: y,
       update(dt, w2, e) {
         e.tick -= dt;
         if (o.vx) { e.x += o.vx * dt; e.y += o.vy * dt; e.sortY = e.y; }
@@ -109,7 +109,7 @@ const A = {
 
   firePatch(w, f, x, y, o = {}) {
     const team = f.team;
-    return w.fx({ x, y, r: o.r || 26, life: o.life || 2, tick: 0, layer: 'under', blue: o.blue,
+    return w.fx({ type: 'patch', x, y, r: o.r || 26, life: o.life || 2, tick: 0, layer: 'under', blue: o.blue,
       update(dt, w2, e) {
         e.tick -= dt;
         if (Math.random() < dt * 14) w2.parts.emit(e.blue ? 'bluefire' : 'fire', e.x + rand(-e.r, e.r) * 0.7, e.y + rand(-e.r, e.r) * 0.4, 1, { smax: 20, scale: 0.9 });

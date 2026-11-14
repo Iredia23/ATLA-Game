@@ -57,7 +57,7 @@ const Sound = {
   },
 
   play(name) {
-    if (!this.ctx || !Save.data.settings.sfx) return;
+    if (!this.ctx || !Save.data.settings.sfx || this.mute) return;
     const now = performance.now();
     if (this.last[name] && now - this.last[name] < 45) return;
     this.last[name] = now;

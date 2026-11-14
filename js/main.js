@@ -64,7 +64,7 @@ class Battle {
   spawnDelayed(id, opt = {}) {
     const [x, y] = this.edgePoint();
     this.pending++;
-    this.world.fx({ x, y, life: 0.8, layer: 'under', onEnd: () => { this.pending--; this.spawn(id, x, y, opt); },
+    this.world.fx({ type: 'spawn', x, y, life: 0.8, layer: 'under', onEnd: () => { this.pending--; this.spawn(id, x, y, opt); },
       draw(ctx, w, e) { const k = e.t / e.life; ctx.save(); ctx.globalAlpha = 0.5 * k; ctx.fillStyle = '#1a0a0a'; ellipse(ctx, e.x, e.y, 22 * k, 9 * k); ctx.fill(); ctx.restore(); } });
   }
 
@@ -187,6 +187,7 @@ const Game = {
     Save.load();
     this.canvas = document.getElementById('game');
     this.ctx = this.canvas.getContext('2d');
+    R3.init();
     this.resize();
     addEventListener('resize', () => this.resize());
     Input.init(this.canvas);
@@ -208,11 +209,27 @@ const Game = {
     this.cssW = innerWidth; this.cssH = innerHeight;
     this.canvas.width = Math.round(this.cssW * this.dpr); this.canvas.height = Math.round(this.cssH * this.dpr);
     this.canvas.style.width = this.cssW + 'px'; this.canvas.style.height = this.cssH + 'px';
+    R3.resize(this.cssW, this.cssH, this.dpr);
+  },
+
+  is3d() { return R3.active(); },
+
+  // world point (x, y) at height h (world px) → screen coordinates
+  toScreen(x, y, h = 0) {
+    if (this.is3d()) return R3.project(x, y, h);
+    const z = this.cam.zoom;
+    return { x: (x - this.cam.x) * z + this.cssW / 2, y: (y - h - this.cam.y) * z + this.cssH / 2, vis: true };
+  },
+
+  focusCamera(dt) {
+    if (this.is3d()) R3.updateCamera(dt, this.world, this.battle.player, this.mouseWorld);
+    else this.updateCamera(dt);
   },
 
   start(cfg) {
     Sound.init();
     this.lastCfg = cfg;
+    R3.dropMenu();
     this.battle = new Battle(cfg);
     this.world = this.battle.world;
     const p = this.battle.player;
@@ -232,11 +249,11 @@ const Game = {
     this.last = t; this.t += dt;
     if (this.state === 'play' && this.battle) {
       const w = this.world;
-      this.updateCamera(dt);
+      this.focusCamera(dt);
       const sdt = w.slowmo > 0 ? dt * 0.3 : dt;
       this.battle.update(sdt, dt);
     } else if (this.state === 'over' && this.battle) {
-      this.updateCamera(dt);
+      this.focusCamera(dt);
       this.world.update(dt * 0.25);
     }
     this.render(dt);
@@ -261,6 +278,15 @@ const Game = {
   render(dt) {
     const ctx = this.ctx;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    if (this.is3d()) {
+      if (dt) R3.adapt(dt);
+      ctx.clearRect(0, 0, this.cssW, this.cssH);
+      if (this.world) { R3.render(this.world, dt); UI.drawHUD(ctx, this); }
+      else R3.renderMenu(dt, this.t);
+      UI.tickPortraits(this.t);
+      return;
+    }
+    R3.hide();
     ctx.fillStyle = '#0d0b10'; ctx.fillRect(0, 0, this.cssW, this.cssH);
     if (this.world) {
       const w = this.world, z = this.cam.zoom;
