@@ -58,9 +58,9 @@ const UI = {
       case 'diff': Save.data.settings.diff = d.v; Save.write(); this.settings(); break;
       case 'toggle': Save.data.settings[d.k] = !Save.data.settings[d.k]; Save.write(); Sound.applySettings(); this.settings(); break;
       case 'setv': Save.data.settings[d.k] = d.v; Save.write(); this.settings(); break;
-      case 'reset':
-        if (confirm('Reset all story progress and records?')) { Save.reset(); this.settings(); }
-        break;
+      case 'reset': this.settings(true); break;
+      case 'resetYes': Save.reset(); this.settings(); break;
+      case 'resetNo': this.settings(); break;
       case 'pauseHow': this.howto(true); break;
       case 'pauseBack': this.pauseMenu(); break;
     }
@@ -291,7 +291,7 @@ const UI = {
       </div>`, 'howto-scr');
   },
 
-  settings() {
+  settings(confirmReset) {
     const s = Save.data.settings;
     const tg = (k, label) => `<button class="btn toggle ${s[k] ? 'on' : ''}" data-act="toggle" data-k="${k}">${label}: ${s[k] ? 'On' : 'Off'}</button>`;
     this.show(`
@@ -311,7 +311,9 @@ const UI = {
         <h3>Audio &amp; display</h3>
         <div class="row">${tg('sfx', 'Sound effects')}${tg('music', 'Music')}${tg('numbers', 'Damage numbers')}</div>
         <h3>Progress</h3>
-        <div class="row">${tg('unlockAll', 'Unlock all chapters & characters')}<button class="btn danger" data-act="reset">Reset progress</button></div>
+        <div class="row">${tg('unlockAll', 'Unlock all chapters & characters')}${confirmReset
+          ? '<span class="note">Erase all story progress and records?</span><button class="btn danger" data-act="resetYes">Yes, reset</button><button class="btn" data-act="resetNo">Cancel</button>'
+          : '<button class="btn danger" data-act="reset">Reset progress</button>'}</div>
       </div>`, 'settings-scr');
   },
 
