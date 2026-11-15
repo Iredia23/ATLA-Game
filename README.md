@@ -14,7 +14,9 @@ Alternatively, serve the folder (for example `python3 -m http.server`) and open 
 
 ### Controls
 
-| Input | Action |
+Play with keyboard and mouse, or a wired controller.
+
+| Keyboard / mouse | Action |
 |---|---|
 | `W A S D` / arrows | Move |
 | Mouse | Aim |
@@ -28,6 +30,24 @@ Alternatively, serve the folder (for example `python3 -m http.server`) and open 
 | Mouse wheel | Zoom the camera, 3D only |
 | `Esc` / `P` | Pause |
 | `M` | Toggle music |
+
+### Controller
+
+Any standard USB controller works (Xbox, PlayStation or generic). Plug it in and press a button to wake it. The browser only reports a controller after a button press.
+
+| Controller | Action |
+|---|---|
+| Left stick / D-pad | Move, navigate menus |
+| Right stick | Aim. Let go and attacks lock on to the nearest enemy |
+| RT / R2 | Basic attack (hold) |
+| X / □, Y / △, B / ○ | Abilities 1, 2, 3 |
+| A / ✕ or LT / L2 | Dash. A selects in menus |
+| RB / R1 | Ultimate |
+| LB / L1 | Switch camera (3D) |
+| Start / Options | Pause |
+| B / ○ in menus | Back |
+
+On-screen button prompts switch automatically between keyboard and controller, and the controller rumbles when you take hits or unleash an ultimate (on controllers and browsers that support vibration).
 
 ## Game modes
 

@@ -13,7 +13,7 @@ class Battle {
     this.stats = { time: 0, dmgTaken: 0, kills: 0 }; this.score = 0; this.addT = 0;
     this.result = null; this.endT = 0; this.shown = false; this.bannerObj = null;
     w.onKill = (t) => { if (t.team !== 0) { this.stats.kills++; this.score += t.boss ? 1000 : t.def.boss ? 600 : 100; } };
-    w.onPlayerHurt = (a) => { this.stats.dmgTaken += a; };
+    w.onPlayerHurt = (a) => { this.stats.dmgTaken += a; Input.rumble(0.25 + a / 40, 90 + a * 4); };
     if (cfg.mode === 'story') this.banner(cfg.stage.title, `${BOOKS[cfg.stage.book - 1].name} · Chapter ${cfg.stage.ch}`, BOOKS[cfg.stage.book - 1].color, 3);
     else if (duel) this.banner('DUEL', `${ROSTER[cfg.charId].name} vs ${ROSTER[cfg.foe].name}`, '#ffd27a', 2.4);
     else this.banner('SURVIVAL', THEMES[cfg.theme].name, '#ffd27a', 2.4);
@@ -222,7 +222,9 @@ const Game = {
   },
 
   focusCamera(dt) {
-    if (this.is3d()) R3.updateCamera(dt, this.world, this.battle.player, this.mouseWorld);
+    const p = this.battle.player;
+    const look = Input.pad.active ? { x: p.aimX, y: p.aimY } : this.mouseWorld;
+    if (this.is3d()) R3.updateCamera(dt, this.world, p, look);
     else this.updateCamera(dt);
   },
 
@@ -247,6 +249,12 @@ const Game = {
   loop(t) {
     const dt = Math.min(0.033, (t - this.last) / 1000 || 0.016);
     this.last = t; this.t += dt;
+    Input.pollPad();
+    if (Input.padHit(9)) { if (this.state === 'play') this.pause(); else if (this.state === 'pause') this.resume(); Input.pad.prev = Input.pad.btn.slice(); }
+    if (Input.padHit(4) && this.state === 'play' && R3.active()) {
+      Save.data.settings.cam = Save.data.settings.cam === 'action' ? 'tactical' : 'action'; Save.write();
+    }
+    if (this.state !== 'play') UI.padNav(dt);
     if (this.state === 'play' && this.battle) {
       const w = this.world;
       this.focusCamera(dt);
@@ -267,7 +275,8 @@ const Game = {
     const vw = this.cssW / z, vh = this.cssH / z;
     this.mouseWorld.x = this.cam.x + (Input.mx - this.cssW / 2) / z;
     this.mouseWorld.y = this.cam.y + (Input.my - this.cssH / 2) / z;
-    let tx = p.x + (this.mouseWorld.x - p.x) * 0.18, ty = p.y - 20 + (this.mouseWorld.y - p.y) * 0.18;
+    const look = Input.pad.active ? { x: p.aimX, y: p.aimY } : this.mouseWorld;
+    let tx = p.x + (look.x - p.x) * 0.18, ty = p.y - 20 + (look.y - p.y) * 0.18;
     tx = vw >= w.W ? w.W / 2 : clamp(tx, vw / 2, w.W - vw / 2);
     ty = vh >= w.H ? w.H / 2 : clamp(ty, vh / 2, w.H - vh / 2);
     const k = 1 - Math.exp(-8 * dt);

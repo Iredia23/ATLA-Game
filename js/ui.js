@@ -26,7 +26,68 @@ const UI = {
     this.root.className = cls === 'title' ? '' : 'dim';
     this.root.scrollTop = 0;
   },
-  hide() { this.root.style.display = 'none'; this.root.innerHTML = ''; this.portraits = []; },
+  hide() { this.root.style.display = 'none'; this.root.innerHTML = ''; this.portraits = []; this.padFocus = null; },
+
+  toast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) { t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(this.toastT); this.toastT = setTimeout(() => t.classList.remove('show'), 2600);
+  },
+
+  // ---------------- controller menu navigation ----------------
+  // D-pad / left stick moves between buttons, A selects, B goes back.
+  padNav(dt) {
+    const P = Input.pad;
+    if (!P.connected || this.root.style.display === 'none' || !this.root.innerHTML) return;
+    const items = [...this.root.querySelectorAll('[data-act]')].filter(el => !el.classList.contains('locked') && !el.disabled && el.offsetParent !== null);
+    if (!items.length) return;
+    const key = (el) => el.dataset.act + '|' + (el.dataset.id || el.dataset.v || el.dataset.k || '');
+    let cur = this.padFocus && items.includes(this.padFocus) ? this.padFocus : null;
+    if (!cur && this.padKey) cur = items.find(el => key(el) === this.padKey) || null;
+    let fresh = false;
+    if (!cur && P.active) {
+      // start on the most useful control: the selected hero, the next chapter, the main action
+      const pref = ['.card.sel', '.stage:not(.locked):not(.done)', '.stage:not(.locked)', '.btn.go', '.menu .btn', '.arena', '.pause .btn', '.results .btn', '.settings .btn'];
+      for (const s of pref) { const el = this.root.querySelector(s); if (el && items.includes(el)) { cur = el; break; } }
+      cur = cur || items[0];
+      fresh = true;
+    }
+    const [lx, ly] = Input.stick(0);
+    let dx = lx, dy = ly;
+    if (Input.padDown(12)) dy = -1; if (Input.padDown(13)) dy = 1; if (Input.padDown(14)) dx = -1; if (Input.padDown(15)) dx = 1;
+    this.navT = (this.navT || 0) - dt;
+    const moving = Math.hypot(dx, dy) > 0.5;
+    if (!moving) this.navT = 0;
+    if (fresh && moving) { this.navT = 0.32; this.navHeld = true; }
+    if (moving && this.navT <= 0 && cur) {
+      this.navT = this.navHeld ? 0.14 : 0.32; this.navHeld = true;
+      const horiz = Math.abs(dx) > Math.abs(dy);
+      const vx = horiz ? Math.sign(dx) : 0, vy = horiz ? 0 : Math.sign(dy);
+      const r0 = cur.getBoundingClientRect(), cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+      let best = null, bs = Infinity;
+      for (const el of items) {
+        if (el === cur) continue;
+        const r = el.getBoundingClientRect(), ex = r.left + r.width / 2 - cx, ey = r.top + r.height / 2 - cy;
+        const along = ex * vx + ey * vy, across = Math.abs(ex * vy - ey * vx);
+        if (along <= 4) continue;
+        const s = along + across * 2.2;
+        if (s < bs) { bs = s; best = el; }
+      }
+      if (best) { cur = best; Sound.play('ui'); }
+    } else if (!moving) this.navHeld = false;
+    if (cur !== this.padFocus) {
+      if (this.padFocus) this.padFocus.classList.remove('padfocus');
+      this.padFocus = cur;
+      if (cur) { cur.classList.add('padfocus'); this.padKey = key(cur); cur.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    }
+    if (cur && P.active && !cur.classList.contains('padfocus')) cur.classList.add('padfocus');
+    if (Input.padHit(0) && cur) { P.prev = P.btn.slice(); cur.click(); this.padFocus = null; }
+    else if (Input.padHit(1)) {
+      const back = this.root.querySelector('[data-act=back],[data-act=pauseBack],[data-act=resume],.head [data-act=title]');
+      if (back) { P.prev = P.btn.slice(); back.click(); this.padFocus = null; }
+    }
+  },
 
   act(a, d) {
     switch (a) {
@@ -154,7 +215,8 @@ const UI = {
 
   detailHTML(id) {
     const d = ROSTER[id];
-    const ab = (k, a, key) => a ? `<div class="ab"><span class="ic">${a.icon || '•'}</span><div><b>${esc(a.name)}</b> <kbd>${key}</kbd>${a.chi ? ` <span class="chi">${a.chi} chi</span>` : ''}${a.cd >= 1 ? ` <span class="cdv">${a.cd}s</span>` : ''}<br><span class="ds">${esc(a.desc || '')}</span></div></div>` : '';
+    const PADKEY = { LMB: 'RT', Q: 'X', E: 'Y', R: 'B', SPACE: 'A', F: 'RB' };
+    const ab = (k, a, key) => a ? `<div class="ab"><span class="ic">${a.icon || '•'}</span><div><b>${esc(a.name)}</b> <kbd>${key}</kbd>${Input.pad.connected ? ` <kbd>${PADKEY[key]}</kbd>` : ''}${a.chi ? ` <span class="chi">${a.chi} chi</span>` : ''}${a.cd >= 1 ? ` <span class="cdv">${a.cd}s</span>` : ''}<br><span class="ds">${esc(a.desc || '')}</span></div></div>` : '';
     const bar = (label, v, max) => `<div class="stat"><span>${label}</span><div class="sb"><i style="width:${clamp(v / max, 0, 1) * 100}%"></i></div></div>`;
     return `<div class="dhead" style="--ec:${ELEMENT_COLORS[d.element]}">
         <canvas class="portrait big" data-id="${id}" data-anim="1" width="170" height="170"></canvas>
@@ -258,6 +320,19 @@ const UI = {
             <tr><td><kbd>V</kbd></td><td>Switch camera (tactical / action) — 3D view</td></tr>
             <tr><td><kbd>Mouse wheel</kbd></td><td>Zoom camera — 3D view</td></tr>
             <tr><td><kbd>M</kbd></td><td>Toggle music</td></tr>
+          </table>
+          <h3>Controller</h3>
+          <p class="padnote">Plug in any standard USB controller (Xbox, PlayStation or generic) and press a button to wake it.</p>
+          <table>
+            <tr><td><kbd>Left stick</kbd> / <kbd>D-pad</kbd></td><td>Move · navigate menus</td></tr>
+            <tr><td><kbd>Right stick</kbd></td><td>Aim (let go to lock on to the nearest enemy)</td></tr>
+            <tr><td><kbd>RT</kbd> / <kbd>R2</kbd></td><td>Basic attack</td></tr>
+            <tr><td><kbd>X</kbd> <kbd>Y</kbd> <kbd>B</kbd> / <kbd>□</kbd> <kbd>△</kbd> <kbd>○</kbd></td><td>Abilities 1, 2, 3</td></tr>
+            <tr><td><kbd>A</kbd> / <kbd>✕</kbd> or <kbd>LT</kbd></td><td>Dash · select in menus</td></tr>
+            <tr><td><kbd>RB</kbd> / <kbd>R1</kbd></td><td>Ultimate</td></tr>
+            <tr><td><kbd>LB</kbd> / <kbd>L1</kbd></td><td>Switch camera (3D)</td></tr>
+            <tr><td><kbd>Start</kbd> / <kbd>Options</kbd></td><td>Pause</td></tr>
+            <tr><td><kbd>B</kbd> / <kbd>○</kbd> in menus</td><td>Back</td></tr>
           </table>
           <h3>Resources</h3>
           <p><b class="hp">Health</b> — run out and you're defeated. Grab <b>cabbages</b> 🥬 dropped by enemies to heal (sorry, cabbage merchant).</p>
@@ -456,14 +531,16 @@ const UI = {
     bar(y + 34, p.hp, p.maxHp, '#c0392b', '#ff6b5a', `${Math.ceil(p.hp)} / ${p.maxHp}`);
     bar(y + 52, p.chi, p.maxChi, shade(ELEMENT_COLORS[p.def.element], -0.3), ELEMENT_COLORS[p.def.element], `Chi ${Math.floor(p.chi)}`);
     const full = p.ult >= 100;
-    bar(y + 70, p.ult, 100, '#b8860b', full ? `hsl(${(t * 200) % 360},90%,65%)` : '#ffd700', full ? 'ULTIMATE READY — F' : `Ultimate ${Math.floor(p.ult)}%`);
+    bar(y + 70, p.ult, 100, '#b8860b', full ? `hsl(${(t * 200) % 360},90%,65%)` : '#ffd700', full ? `ULTIMATE READY — ${Input.pad.active ? 'RB' : 'F'}` : `Ultimate ${Math.floor(p.ult)}%`);
     // statuses
     const st = []; if (p.status.burn) st.push('🔥'); if (p.status.slow) st.push('❄️'); if (p.status.stun > 0) st.push('⭐'); if (p.status.root > 0) st.push('📌'); if (p.status.chiBlock > 0) st.push('⊘');
     if (st.length) { ctx.font = '16px sans-serif'; ctx.fillText(st.join(' '), x + 8, y + 112); }
   },
 
   drawAbilityBar(ctx, p, w, W, H) {
-    const slots = [['basic', 'LMB'], ['q', 'Q'], ['e', 'E'], ['r', 'R'], ['dash', 'SPACE'], ['ult', 'F']];
+    const slots = Input.pad.active
+      ? [['basic', 'RT'], ['q', 'X'], ['e', 'Y'], ['r', 'B'], ['dash', 'A'], ['ult', 'RB']]
+      : [['basic', 'LMB'], ['q', 'Q'], ['e', 'E'], ['r', 'R'], ['dash', 'SPACE'], ['ult', 'F']];
     const S = 58, gap = 10, total = slots.length * S + (slots.length - 1) * gap;
     let x = W / 2 - total / 2; const y = H - S - 26;
     ctx.fillStyle = 'rgba(10,8,14,0.55)'; roundRect(ctx, x - 10, y - 10, total + 20, S + 32, 12); ctx.fill();

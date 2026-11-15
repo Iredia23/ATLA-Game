@@ -16,7 +16,34 @@ class PlayerController {
     I.r = k('KeyR') || k('Digit3');
     I.dash = Input.hit('Space') || Input.hit('ShiftLeft') || Input.hit('ShiftRight');
     I.ult = Input.hit('KeyF') || Input.hit('Digit4');
+    if (Input.pad.connected) this.pad(f, w, I);
     return I;
+  }
+
+  // Twin-stick controls. With the right stick idle, attacks lock on to the nearest enemy.
+  pad(f, w, I) {
+    const [lx, ly] = Input.stick(0);
+    I.mx += lx; I.my += ly;
+    if (Input.padDown(12)) I.my -= 1; if (Input.padDown(13)) I.my += 1;
+    if (Input.padDown(14)) I.mx -= 1; if (Input.padDown(15)) I.mx += 1;
+    I.basic = I.basic || Input.padDown(7);
+    I.q = I.q || Input.padDown(2);
+    I.e = I.e || Input.padDown(3);
+    I.r = I.r || Input.padDown(1);
+    I.dash = I.dash || Input.padHit(0) || Input.padHit(6);
+    I.ult = I.ult || Input.padHit(5);
+    if (!Input.pad.active) return;
+    const [rx, ry, rm] = Input.stick(1);
+    let ang = this.padAng ?? f.ang, d = this.padDist || 260;
+    if (rm > 0.15) { ang = Math.atan2(ry, rx); d = 140 + rm * 360; this.lockT = 0.4; }
+    else {
+      this.lockT = (this.lockT || 0) - 1 / 60;
+      const t = this.lockT <= 0 ? w.nearestEnemy(f, 720) : null;
+      if (t) { ang = angTo(f.x, f.y, t.x, t.y); d = Math.max(90, dist(f.x, f.y, t.x, t.y)); }
+      else if (Math.hypot(I.mx, I.my) > 0.3) { ang = Math.atan2(I.my, I.mx); d = 260; }
+    }
+    this.padAng = ang; this.padDist = d;
+    I.ax = f.x + Math.cos(ang) * d; I.ay = f.y + Math.sin(ang) * d;
   }
 }
 

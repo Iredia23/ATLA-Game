@@ -145,3 +145,12 @@ canvas#game3d { position: fixed; inset: 0; display: block; }
 .settings .sep { width: 18px; }
 .settings .note { color: var(--muted); font-size: 13px; }
 .btn[disabled] { opacity: .4; cursor: not-allowed; }
+
+.padfocus { outline: 3px solid var(--gold); outline-offset: 3px; box-shadow: 0 0 18px rgba(255, 210, 122, .45); }
+.btn:focus-visible, .card:focus-visible, .stage:focus-visible, .arena:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.padnote { color: var(--muted); font-size: 13px; margin: 0 0 6px; }
+#toast { position: fixed; left: 50%; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  background: rgba(22, 18, 28, .95); border: 1px solid var(--gold); color: var(--ink); padding: 10px 18px; border-radius: 10px; z-index: 20;
+  transition: opacity .25s, transform .25s; font-weight: bold; }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }

@@ -80,6 +80,7 @@ class Fighter {
       w.text(this.x, this.y - 70, ab.call || ab.name.toUpperCase(), '#ffe27a', 22);
       w.shakeIt(8);
       Sound.play('ult');
+      if (this.isPlayer) Input.rumble(0.8, 350);
     }
     ab.cast(this, w, angTo(this.x, this.y, this.aimX, this.aimY));
     return true;
